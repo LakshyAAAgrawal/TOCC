@@ -127,7 +127,7 @@ def dfa_to_c(dfa):
         )
     main_function.append("\t};")
     main_function.extend([
-        "\twhile((c = getchar()) != '\\n'){",
+        "\twhile((c = getchar())!=EOF && (c!='\\n')){",
 	    "\t\tcurr_state = transition(curr_state, c);",
 	    "\t\tprintf(\"%s\\n\", state_names[curr_state]);",
 	    "\t}"
