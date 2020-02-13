@@ -101,7 +101,7 @@ The custom language for DFA is specified as follows:
    ```
 5. Test 1
    ```
-   echo "01\n" | ./test
+   echo "01" | ./test
    ```
    Output
    ```
@@ -111,7 +111,7 @@ The custom language for DFA is specified as follows:
    ```
    Test 2
    ```
-   echo "011\n" | ./test
+   echo "011" | ./test
    ```
    Output
    ```
