@@ -25,6 +25,84 @@ class DFA():
         self.d = d
         self.F = list(F)
 
+    def compile_to_c(self):
+        preprocessing = [
+            "#include<stdio.h>",
+            "#include<stdlib.h>"
+        ]
+        transition_function = [
+            "int transition(int q, char b){"
+        ]
+        for i in range(len(self.Q)):
+            transition_function.append(
+                f"\tif(q == {i}){{"
+            )
+            for letter in self.E:
+                transition_function.append(
+                    f"\t\tif(b == '{letter}'){{"
+                )
+                transition_function.append(
+                    f"\t\t\treturn {self.Q.index(self.d[self.Q[i]][letter])};"
+                )
+                transition_function.append("\t\t}")
+            transition_function.append("\t}")
+        transition_function.append("\texit(2);")
+        transition_function.append("}")
+        main_function = []
+        main_function.extend([
+            "int main(){",
+            "\tint curr_state = 0;",
+            "\tchar c;"
+        ])
+        len_state_names = max(map(lambda s: len(s), self.Q))
+        main_function.append(
+            f"\tchar state_names[{len(self.Q)}][{len_state_names + 1}] = {{"
+        )
+        for state in self.Q:
+            main_function.append(
+                f"\t\t\"{state}\","
+            )
+        main_function.append("\t};")
+        main_function.extend([
+            "\twhile((c = getchar())!=EOF && (c!='\\n')){",
+            "\t\tcurr_state = transition(curr_state, c);",
+            "\t\tprintf(\"%s\\n\", state_names[curr_state]);",
+            "\t}"
+        ])
+        if len(self.F) != 0:
+            temp = []
+            for fstate in self.F:
+                temp.append(
+                    f"(curr_state == {self.Q.index(fstate)})"
+                )
+            if len(self.F) == 1:
+                main_function.append(
+                    f"\tif({temp[0]}){{"
+                )
+            else:
+                main_function.append(
+                    f"\tif ({temp[0]} ||"
+                )
+                for i in range(1, len(temp) - 1):
+                    main_function.append(
+                        f"\t   {temp[i]} ||"
+                    )
+                main_function.append(
+                    f"\t    {temp[-1]}){{"
+                )
+            main_function.extend([
+                "\t\tprintf(\"Accept\\n\");",
+                "\t\treturn 0;",
+                "\t}",
+            ])
+        main_function.extend([
+            "\tprintf(\"Not Accept\\n\");",
+            "\treturn 1;"
+        ])
+        main_function.append("}")
+        lines = [*preprocessing, *transition_function, *main_function]
+        return "\n".join(lines)
+
 def check_consistency(alphabet, states, transition, q0, F):
     for state in states:
         if state not in transition:
@@ -43,7 +121,6 @@ invalid")
 states")
     if not F.issubset(states):
         raise SemanticError("Semantic error: Invalid set of final states")
-
 
 def constructDFA(source):
     source = source.strip()
@@ -88,84 +165,6 @@ def constructDFA(source):
             transition[tokens[0]][tokens[1]] = tokens[2]
     return DFA(states, alphabet, segments[0], transition, final_states)
 
-def dfa_to_c(dfa):
-    preprocessing = [
-        "#include<stdio.h>",
-        "#include<stdlib.h>"
-    ]
-    transition_function = [
-        "int transition(int q, char b){"
-    ]
-    for i in range(len(dfa.Q)):
-        transition_function.append(
-            f"\tif(q == {i}){{"
-        )
-        for letter in dfa.E:
-            transition_function.append(
-                f"\t\tif(b == '{letter}'){{"
-            )
-            transition_function.append(
-                f"\t\t\treturn {dfa.Q.index(dfa.d[dfa.Q[i]][letter])};"
-            )
-            transition_function.append("\t\t}")
-        transition_function.append("\t}")
-    transition_function.append("\texit(2);")
-    transition_function.append("}")
-    main_function = []
-    main_function.extend([
-        "int main(){",
-        "\tint curr_state = 0;",
-        "\tchar c;"
-    ])
-    len_state_names = max(map(lambda s: len(s), dfa.Q))
-    main_function.append(
-        f"\tchar state_names[{len(dfa.Q)}][{len_state_names + 1}] = {{"
-    )
-    for state in dfa.Q:
-        main_function.append(
-            f"\t\t\"{state}\","
-        )
-    main_function.append("\t};")
-    main_function.extend([
-        "\twhile((c = getchar())!=EOF && (c!='\\n')){",
-	    "\t\tcurr_state = transition(curr_state, c);",
-	    "\t\tprintf(\"%s\\n\", state_names[curr_state]);",
-	    "\t}"
-    ])
-    if len(dfa.F) != 0:
-        temp = []
-        for fstate in dfa.F:
-            temp.append(
-                f"(curr_state == {dfa.Q.index(fstate)})"
-            )
-        if len(dfa.F) == 1:
-            main_function.append(
-                f"\tif({temp[0]}){{"
-            )
-        else:
-            main_function.append(
-                f"\tif ({temp[0]} ||"
-            )
-            for i in range(1, len(temp) - 1):
-                main_function.append(
-                    f"\t   {temp[i]} ||"
-                )
-            main_function.append(
-                f"\t    {temp[-1]}){{"
-            )
-        main_function.extend([
-	        "\t\tprintf(\"Accept\\n\");",
-	        "\t\treturn 0;",
-	        "\t}",
-        ])
-    main_function.extend([
-	    "\tprintf(\"Not Accept\\n\");",
-	    "\treturn 1;"
-    ])
-    main_function.append("}")
-    lines = [*preprocessing, *transition_function, *main_function]
-    return "\n".join(lines)
-
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         sys.exit("Usage: tocc <sourcefile> <output_c>.c <output_binary>")
@@ -174,7 +173,7 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as sourcefile:
         source = sourcefile.read()
     dfa = constructDFA(source)
-    c_code = dfa_to_c(dfa)
+    c_code = dfa.compile_to_c()
     with open(sys.argv[2], "w") as outputfile:
         print(c_code, file=outputfile)
     subprocess.run(["gcc", sys.argv[2], "-o", sys.argv[3]])
