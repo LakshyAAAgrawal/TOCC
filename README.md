@@ -87,7 +87,7 @@ The custom language for DFA is specified as follows:
 		   "q0",
 		   "q1",
 	   };
-	   while((c = getchar()) != '\n'){
+	   while((c = getchar())!=EOF && (c!='\n')){
 		   curr_state = transition(curr_state, c);
 		   printf("%s\n", state_names[curr_state]);
 	   }
