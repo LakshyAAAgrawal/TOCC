@@ -87,7 +87,7 @@ The custom language for DFA is specified as follows:
 		   "q0",
 		   "q1",
 	   };
-	   while((c = getchar()) != '\n'){
+	   while((c = getchar())!=EOF && (c!='\n')){
 		   curr_state = transition(curr_state, c);
 		   printf("%s\n", state_names[curr_state]);
 	   }
@@ -101,7 +101,7 @@ The custom language for DFA is specified as follows:
    ```
 5. Test 1
    ```
-   echo "01\n" | ./test
+   echo "01" | ./test
    ```
    Output
    ```
@@ -111,7 +111,7 @@ The custom language for DFA is specified as follows:
    ```
    Test 2
    ```
-   echo "011\n" | ./test
+   echo "011" | ./test
    ```
    Output
    ```
