@@ -1,5 +1,7 @@
 # TOCC
-A tiny compiler to compile a DFA input as a custom language to corresponding C source code, which gets compiled to a binary using GCC internally.
+A tiny compiler to compile a DFA input as a custom language to:
+1. C source code, which gets compiled to a binary using GCC internally.
+2. DOT code, which gets rendered to a DFA image as PNG using DOT engine.
 
 ## Usage
 Installation is not a must for running the compiler
@@ -12,14 +14,14 @@ Installation is not a must for running the compiler
 2. Run
    ```
    tocc sourcefile.dfa output.c output_binary
-   ./output_binary
+   tocc sourcefile.dfa output.dot output.png
    ```
 
 ### Without Installation
 1. Run
    ```
    ./tocc.py sourcefile.dfa output.c output_binary
-   ./output_binary
+   ./tocc.py sourcefuke.dfa output.dot output.png
    ```
 
 ## Language Specification
@@ -99,6 +101,21 @@ The custom language for DFA is specified as follows:
 	   return 1;
    }
    ```
+   DOT output
+   ```dot
+   digraph DFA{
+	   q0 [shape="doublecircle"]
+	   q1 [shape="circle"]
+	   __ [label="", fixedsize="false", width=0, height=0, shape=none]
+	   q0 -> q0 [label="0"]
+	   q0 -> q1 [label="1"]
+	   q1 -> q1 [label="0"]
+	   q1 -> q0 [label="1"]
+	   __ -> q0
+   }
+   ```
+   Generated Image
+   ![DFA](https://i.imgur.com/v9PH3ld.png)
 5. Test 1
    ```
    echo "01" | ./test
