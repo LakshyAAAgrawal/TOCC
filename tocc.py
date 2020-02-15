@@ -3,6 +3,9 @@ import sys
 import os.path
 import subprocess
 
+USAGE = ("Usage: tocc <sourcefile> <output_c>.c <output_binary>\n"
+        "       tocc <sourcefile> <output_dot>.dot <output_image>.png\n")
+
 class CompileError(Exception):
     pass
 
@@ -24,6 +27,33 @@ class DFA():
         self.q0 = q0
         self.d = d
         self.F = list(F)
+
+    def compile_to_dot(self):
+        lines = [
+            "digraph DFA{"
+        ]
+        states = list(map(
+            lambda x: (
+                f"\t{x} [shape=\"doublecircle\"]"
+                if x in self.F else
+                f"\t{x} [shape=\"circle\"]"
+            ),
+            self.Q
+        ))
+        states.append(
+            '\t__ [label="", fixedsize="false", width=0, height=0, shape=none]'
+        )
+        lines.extend(states)
+        lines.extend([
+            f"\t{q1} -> {self.d[q1][symbol]} [label=\"{symbol}\"]"
+            for q1 in self.d.keys()
+            for symbol in self.d[q1]
+        ])
+        lines.append(
+            f"\t__ -> {self.q0}"
+        )
+        lines.append("}")
+        return "\n".join(lines)
 
     def compile_to_c(self):
         preprocessing = [
@@ -167,13 +197,29 @@ def constructDFA(source):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        sys.exit("Usage: tocc <sourcefile> <output_c>.c <output_binary>")
+        sys.exit(USAGE)
     if not os.path.isfile(sys.argv[1]):
         sys.exit("Sourcefile not a valid filename")
     with open(sys.argv[1], 'r') as sourcefile:
         source = sourcefile.read()
     dfa = constructDFA(source)
-    c_code = dfa.compile_to_c()
-    with open(sys.argv[2], "w") as outputfile:
-        print(c_code, file=outputfile)
-    subprocess.run(["gcc", sys.argv[2], "-o", sys.argv[3]])
+    if sys.argv[2].endswith(".c"):
+        c_code = dfa.compile_to_c()
+        with open(sys.argv[2], "w") as outputfile:
+            print(c_code, file=outputfile)
+        print("C code written to " + sys.argv[2])
+        try:
+            subprocess.run(["gcc", sys.argv[2], "-o", sys.argv[3]])
+        except FileNotFoundError:
+            raise CompileError("GCC not found. Please ensure \"gcc\" is in path")
+    elif sys.argv[2].endswith(".dot") and sys.argv[3].endswith(".png"):
+        dot_code = dfa.compile_to_dot()
+        with open(sys.argv[2], "w") as outputfile:
+            print(dot_code, file=outputfile)
+        print("DOT code written to " + sys.argv[2])
+        try:
+            subprocess.run(["dot", "-Tpng", sys.argv[2], "-o", sys.argv[3]])
+        except FileNotFoundError:
+            raise CompileError("DOT engine not found. Please ensure \"dot\" is in path")
+    else:
+        sys.exit(USAGE)
