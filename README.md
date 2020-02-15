@@ -114,7 +114,6 @@ The custom language for DFA is specified as follows:
 	   __ -> q0
    }
    ```
-   Generated Image
    ![DFA](https://i.imgur.com/v9PH3ld.png)
 5. Test 1
    ```
