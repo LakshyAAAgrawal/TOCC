@@ -15,9 +15,74 @@ class SyntaxError(CompileError):
 class SemanticError(CompileError):
     pass
 
+class NFA():
+    def __init__(self, Q, E, q0, d, F):
+        self.check_consistency(E, Q, d, q0, F)
+        self.Q = list(Q)
+        if self.Q[0] != q0:
+            i = self.Q.index(q0)
+            self.Q[i] = self.Q[0]
+            self.Q[0] = q0
+        self.E = list(E)
+        self.q0 = q0
+        self.d = d
+        self.F = list(F)
+
+    def check_consistency(self, alphabet, states, transition, q0, F):
+        for istate in transition:
+            for letter in transition[istate]:
+                elm = transition[istate][letter]
+                if not set(elm).issubset(states):
+                    raise SemanticError(
+                        f"Semantic error: target state {transition[istate][letter]}"
+                        f" for initial state {istate} with symbol {letter} invalid"
+                    )
+        if q0 not in states:
+            raise SemanticError(
+                f"Semantic error: initial state {q0}"
+                f" not in set of states"
+            )
+        if not F.issubset(states):
+            raise SemanticError("Semantic error: Invalid set of final states")
+
+    def to_dfa(self):
+        def custom_str(obj):
+            if type(obj) == frozenset:
+                ls = list(obj)
+                ls.sort()
+                return "{" + ", ".join(ls) + "}"
+
+        def custom_binary(num, word_length):
+            x = bin(num)[2:]
+            return "0"*(word_length - len(x)) + x
+        Q = {
+                frozenset([
+                    self.Q[i] for i, bit in enumerate(custom_binary(i, len(self.Q)), 0) if bit == '1'
+                ])
+                for i in range(2**len(self.Q))
+        }
+        F = {q for q in Q if not q.isdisjoint(self.F)}
+        F = set(map(custom_str, F))
+        d = {}
+        for istate in Q:
+            d[istate] = dict()
+            for letter in self.E:
+                x = [fstate for q in istate
+                     if q in self.d and letter in self.d[q]
+                     for fstate in self.d[q][letter]]
+                d[istate][letter] = frozenset(x)
+        df = dict()
+        for istate in d:
+            df[custom_str(istate)] = dict()
+            for letter in self.E:
+                df[custom_str(istate)][letter] = custom_str(d[istate][letter])
+        d = df
+        q0 = custom_str(frozenset([self.q0]))
+        return DFA(set(map(custom_str, Q)), self.E, q0, d, F)
+
 class DFA():
     def __init__(self, Q, E, q0, d, F):
-        check_consistency(E, Q, d, q0, F)
+        self.check_consistency(E, Q, d, q0, F)
         self.Q = list(Q)
         if self.Q[0] != q0:
             i = self.Q.index(q0)
@@ -34,9 +99,9 @@ class DFA():
         ]
         states = list(map(
             lambda x: (
-                f"\t{x} [shape=\"doublecircle\"]"
+                f"\t\"{x}\" [shape=\"doublecircle\"]"
                 if x in self.F else
-                f"\t{x} [shape=\"circle\"]"
+                f"\t\"{x}\" [shape=\"circle\"]"
             ),
             self.Q
         ))
@@ -45,12 +110,12 @@ class DFA():
         )
         lines.extend(states)
         lines.extend([
-            f"\t{q1} -> {self.d[q1][symbol]} [label=\"{symbol}\"]"
+            f"\t\"{q1}\" -> \"{self.d[q1][symbol]}\" [label=\"{symbol}\"]"
             for q1 in self.d.keys()
             for symbol in self.d[q1]
         ])
         lines.append(
-            f"\t__ -> {self.q0}"
+            f"\t__ -> \"{self.q0}\""
         )
         lines.append("}")
         return "\n".join(lines)
@@ -133,26 +198,30 @@ class DFA():
         lines = [*preprocessing, *transition_function, *main_function]
         return "\n".join(lines)
 
-def check_consistency(alphabet, states, transition, q0, F):
-    for state in states:
-        if state not in transition:
-            raise SemanticError(f"Semantic error: no transition specified for\
-state {state}")
-        for letter in alphabet:
-            if letter not in transition[state]:
-                raise SemanticError(f"Semantic error: no transition specified\
- for state {state} with character {letter}")
-            if transition[state][letter] not in states:
-                raise SemanticError(f"Semantic error: target state\
-{transition[state][letter]} for initial state {state} with symbol {letter}\
-invalid")
-    if q0 not in states:
-        raise SemanticError(f"Semantic error: initial state {q0} not in set of\
-states")
-    if not F.issubset(states):
-        raise SemanticError("Semantic error: Invalid set of final states")
+    def check_consistency(self, alphabet, states, transition, q0, F):
+        for state in states:
+            if state not in transition:
+                raise SemanticError(
+                    f"Semantic error: no transition specified for state {state}"
+                )
+            for letter in alphabet:
+                if letter not in transition[state]:
+                    raise SemanticError(
+                        f"Semantic error: no transition specified "
+                        f"for state {state} with character {letter}"
+                    )
+                if transition[state][letter] not in states:
+                    raise SemanticError(
+                        f"Semantic error: target state {transition[state][letter]}"
+                        f" for initial state {state} with symbol {letter} invalid"
+                    )
+        if q0 not in states:
+            raise SemanticError(f"Semantic error: initial state {q0} not in set of\
+    states")
+        if not F.issubset(states):
+            raise SemanticError("Semantic error: Invalid set of final states")
 
-def constructDFA(source):
+def constructFA(source, createDFA = True):
     source = source.strip()
     if source[0] != "{":
         raise SyntaxError("Syntax error: First character should be {")
@@ -188,12 +257,26 @@ def constructDFA(source):
         alphabet.update(tokens[1])
         if tokens[0] in transition:
             if tokens[1] in transition[tokens[0]]:
-                raise SemanticError(f"Semantic error: {tokens[1]} appeared more than once for the same initial state")
-            transition[tokens[0]][tokens[1]] = tokens[2]
+                if createDFA:
+                    raise SemanticError(f"Semantic error: {tokens[1]} appeared "
+                                        f"more than once for the same initial state")
+                else:
+                    transition[tokens[0]][tokens[1]].append(tokens[2])
+            else:
+                if createDFA:
+                    transition[tokens[0]][tokens[1]] = tokens[2]
+                else:
+                    transition[tokens[0]][tokens[1]] = [tokens[2]]
         else:
             transition[tokens[0]] = dict()
-            transition[tokens[0]][tokens[1]] = tokens[2]
-    return DFA(states, alphabet, segments[0], transition, final_states)
+            if createDFA:
+                transition[tokens[0]][tokens[1]] = tokens[2]
+            else:
+                transition[tokens[0]][tokens[1]] = [tokens[2]]
+    if createDFA:
+        return DFA(states, alphabet, segments[0], transition, final_states)
+    else:
+        return NFA(states, alphabet, segments[0], transition, final_states)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
@@ -202,7 +285,12 @@ if __name__ == "__main__":
         sys.exit("Sourcefile not a valid filename")
     with open(sys.argv[1], 'r') as sourcefile:
         source = sourcefile.read()
-    dfa = constructDFA(source)
+    if sys.argv[1].endswith(".dfa"):
+        dfa = constructFA(source, createDFA = True)
+    elif sys.argv[1].endswith(".nfa"):
+        dfa = constructFA(source, createDFA = False).to_dfa()
+    else:
+        sys.exit("Sourcefile must be either dfa or nfa")
     if sys.argv[2].endswith(".c"):
         c_code = dfa.compile_to_c()
         with open(sys.argv[2], "w") as outputfile:
