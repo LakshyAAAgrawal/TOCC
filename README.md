@@ -1,11 +1,21 @@
 # TOCC
-A tiny compiler to compile a DFA input as a custom language to:
-1. C source code, which gets compiled to a binary using GCC internally.
-2. DOT code, which gets rendered to a DFA image as PNG using DOT engine.
+A software for Theory of Computation to convert NFA and DFA input as a custom language to:
+1. C code which can read strings from stdin and show the series of transitions
+   along with accept/reject status. It gets internally compiled using GCC.
+2. DOT code which facilitates visualisation of the input NFA and DFA.
+3. Conversion of NFA to DFA using [Powerset construction method](
+   https://en.wikipedia.org/wiki/Powerset_construction)
 
 ## Usage
-Installation is not a must for running the compiler
-
+1. Pull the repository
+   ```
+   git clone https://github.com/LakshyAAAgrawal/TOCC
+   ```
+2. cd into the cloned repository
+   ```
+   cd TOCC
+   ```
+3. You could choose to install the software onto the system PATH or you could run directly.
 ### Installation
 1. execute
    ```
@@ -13,19 +23,23 @@ Installation is not a must for running the compiler
    ```
 2. Run
    ```
-   tocc sourcefile.dfa output.c output_binary
-   tocc sourcefile.dfa output.dot output.png
+   tocc sourcefile.dfa output.c output_binary   # Convert DFA to C and binary
+   tocc sourcefile.dfa output.dot output.png    # Convert DFA to DOT and Image
+   tocc sourcefile.nfa output.c output_binary   # Convert NFA to C and binary
+   tocc sourcefile.nfa output.dot output.png    # Convert NFA to DOT and binary
    ```
 
 ### Without Installation
 1. Run
    ```
-   ./tocc.py sourcefile.dfa output.c output_binary
-   ./tocc.py sourcefuke.dfa output.dot output.png
+   ./tocc.py sourcefile.dfa output.c output_binary   # Convert DFA to C and binary
+   ./tocc.py sourcefuke.dfa output.dot output.png    # Convert DFA to DOT and Image
+   ./tocc.py sourcefile.nfa output.c output_binary   # Convert NFA to C and binary
+   ./tocc.py sourcefuke.nfa output.dot output.png    # Convert NFA to DOT and binary
    ```
 
 ## Language Specification
-The custom language for DFA is specified as follows:
+The custom language for DFA and NFA is specified as follows:
 1. The names of states must be alphanumeric.
 2. The program has the following structure:
    ```
@@ -40,7 +54,7 @@ The custom language for DFA is specified as follows:
    }
    ```
 3. The ```<symbolk>``` above is a single alpha-numeric character specifying the symbol for making the transition from ```<statei>``` to ```<statej>```.
-4. Corresponding to each state, transition rule must be specified for each letter of the alphabet.
+4. (Only for DFA) Corresponding to each state, transition rule must be specified for each letter of the alphabet.
 
 ## Example Language Code
 1. The following DFA checks if the string over {0,1} contains even number of 1 or not:
@@ -58,6 +72,7 @@ The custom language for DFA is specified as follows:
 3. Execute:
    ```
    tocc test.dfa test.c test
+   tocc test.dfa test.dot test.png
    ```
 4. C output:
    ```C
